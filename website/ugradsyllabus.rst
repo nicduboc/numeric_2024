@@ -19,15 +19,16 @@ advection, population growth.
 
 Meeting Times
 -------------
-
-1400-1600 Mondays, MacLeod 3008
+See canvas course page for scheduled class times and location
 
 
 Instructors
 -----------
 
-| Rachel White, rwhite@eoas.ubc.ca, Rm 4019 ESB
-| Susan Allen, sallen@eoas.ubc.ca, Rm 3017 ESB
+| Rachel White, rwhite@eoas.ubc.ca
+| Susan Allen, sallen@eoas.ubc.ca
+
+See canvas course page for office hour locations
 
 Prerequisites
 -------------
