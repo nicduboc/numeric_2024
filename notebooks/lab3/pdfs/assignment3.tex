@@ -10,16 +10,17 @@
 
 \section*{Assignment Set for Laboratory 3}
 
+Hand in your assignments on Canvas by uploading a single pdf.
+
 \begin{itemize}
-\item ATSC 409: Hand-in an answers to Question 1 from the Lab.
+\item ATSC 409: Hand-in answers to all parts of Problem 1from the Lab.
   
-\item EOSC 511/ATSC 506:  Hand-in an answer to the supplementary
-  Question, question \#5 below
+\item EOSC 511/ATSC 506:  Hand-in an answer to the Problem ( \#5) below
 \end{itemize}
 
 \begin{enumerate}
 \setcounter{enumi}{4}
-\item Consider a long hallway in an office building.  If we assume that any cigarrette smoke, mixes across the width of the hallway and vertically through the depth of the hallway much faster than it mixes along the hallway, we can write the diffusion of cigaratte smoke as an equation
+\item Consider a long hallway in an office building.  If we assume that any cigarette smoke mixes across the width of the hallway and vertically through the depth of the hallway much faster than it mixes along the hallway, we can write the diffusion of cigarette smoke as an equation
 \[
 \frac{\pa S}{\dt} = \kappa \frac {\pa^2 S}{\dx^2} - \gamma S + \alpha(x)
 \]
@@ -27,15 +28,19 @@ where $S$ is the concentration of smoke, $\kappa$ is the rate of diffusion of sm
 \begin{enumerate}
 \item Write the appropriate equation for the steady state.
 \item Discretize the hall into $N$ segments and write the equation for the steady state as a matrix equation.
-\item Taking $\alpha(x) = 0.005 \delta(x_*)$ kg m$^{-1}$s$^{-1}$ where you can choose the point $x_*$, $\kappa = 0.05 m^2 s^{-1}$, $\gamma = (3600$ s$)^{-1}$, find the solution for your choice of $N$ between 5 and 15.  Take the length of the hall as 20~m.
-\item What is the condition number of the matrix?
-\item If $\gamma$ is 0 what is the condition number of the matrix?  Physically why is there no single solution?
+\item Taking $\kappa = 0.05$ m$^2$ s$^{-1}$, $\gamma = (3600$ s$)^{-1}$, and 
+\begin{equation}
+\alpha(x) = \left\{ \begin{array}{cl}
+\alpha_o,& x=x_*\\
+0, & x \ne x_*\\
+\end{array} \right.
+\end{equation}
+  where you can choose the point $x_*$ and $\alpha_o = 0.005$ kg m$^{-1}$ s$^{-1}$,  find the solution (using python) for your choice of $N$ between 5 and 15.  Take the length of the hall as 20~m.
+\item What is the condition number of the matrix? (using python)
+\item If $\gamma$ is 0 what is the condition number of the matrix?  (using python) Physically why is there no single solution?
 \item If $\gamma$ is 0 and $\alpha$ is 0, why physically is there no single solution?
 \end{enumerate}
 \end{enumerate}
-
-$\delta(x) = 1$ at $x$ and $0$ everywhere else
-
 
 
 \end{document}
