@@ -93,42 +93,51 @@ class Quantity(object):
         self.now = copy.copy(self.next)
 
 
-def initial_conditions(u, h, ho):
+def initial_conditions(u, v, h, ho):
     """Set the initial condition values.
     """
     u.prev[:] = 0
+    v.prev[:] = 0
     h.prev[:] = 0
     h.prev[len(h.prev) // 2] = ho
 
 
-def boundary_conditions(u_array, h_array, n_grid):
+def boundary_conditions(u_array, v_array, h_array, n_grid):
     """Set the boundary condition values.
     """
     u_array[0] = 0
     u_array[n_grid - 1] = 0
+    v_array[0] = 0
+    v_array[n_grid - 1] = 0
     h_array[0] = h_array[1]
     h_array[n_grid-1] = h_array[n_grid-2]
 
 
-def first_time_step(u, h, g, H, dt, dx, ho, gu, gh, n_grid):
+def first_time_step(u, v, h, g, H, dt, dx, ho, gu, cor, gh, n_grid):
     """Calculate the first time step values from the analytical
     predictor-corrector derived from equations 4.18 and 4.19.
     """
     u.now[1:n_grid - 1] = 0
-    factor = gu * ho / 2
+    v.now[1:n_grid - 1] = 0
     midpoint = n_grid // 2
-    u.now[midpoint - 1] = -factor
-    u.now[midpoint + 1] = factor
+    # u and v are at the midpoint from the first timestep (cor * v.prev[midpoint-1])-
+    factor_u = (gu * ho /2)
+    factor_v = -(cor * u.prev[midpoint-1])-(gu*ho)
+    u.now[midpoint - 1] = -factor_u
+    u.now[midpoint + 1] = factor_u
+    v.now[midpoint + 1] = -factor_v
+    v.now[midpoint - 1] = factor_v
     h.now[1:n_grid - 1] = 0
     h.now[midpoint] = ho - g * H * ho * dt ** 2 / (4 * dx ** 2)
 
-
-def leap_frog(u, h, gu, gh, n_grid):
+def leap_frog(u, v, h, gu, cor, gh, n_grid):
     """Calculate the next time step values using the leap-frog scheme
     derived from equations 4.16 and 4.17.
     """
     for pt in np.arange(1, n_grid - 1):
+        # + (cor * v.now[pt])
         u.next[pt] = u.prev[pt] - gu * (h.now[pt + 1] - h.now[pt - 1])
+        v.next[pt] = v.prev[pt] - (cor * u.now[pt]) 
         h.next[pt] = h.prev[pt] - gh * (u.now[pt + 1] - u.now[pt - 1])
 #     Alternate vectorized implementation:
 #     u.next[1:n_grid - 1] = (u.prev[1:n_grid - 1]
@@ -137,7 +146,7 @@ def leap_frog(u, h, gu, gh, n_grid):
 #                             - gh * (u.now[2:n_grid] - u.now[:n_grid - 2]))
 
 
-def make_graph(u, h, dt, n_time):
+def make_graph(u, v, h, dt, n_time):
     """Create graphs of the model results using matplotlib.
 
     You probably need to run the rain script from within ipython,
@@ -147,11 +156,12 @@ def make_graph(u, h, dt, n_time):
     """
 
     # Create a figure with 2 sub-plots
-    fig, (ax_u, ax_h) = plt.subplots(2,1, figsize=(10,10))
+    fig, (ax_u, ax_v, ax_h) = plt.subplots(3,1, figsize=(10,10))
 
     # Set the figure title, and the axes labels.
-    the_title = fig.text(0.25, 0.95, 'Results from t = %.3fs to %.3fs' % (0, dt*n_time))
+    the_title = fig.text(0.25, 0.95, 'Results from t = %.3fs to %.3fs' %  (0, dt*n_time))
     ax_u.set_ylabel('u [cm/s]')
+    ax_v.set_ylabel('v [cm/s]')
     ax_h.set_ylabel('h [cm]')
     ax_h.set_xlabel('Grid Point')
 
@@ -169,6 +179,7 @@ def make_graph(u, h, dt, n_time):
     for time in range(0, n_time, interval):
         colorVal = scalarMap.to_rgba(time)
         ax_u.plot(u.store[:, time], color=colorVal)
+        ax_v.plot(v.store[:, time], color=colorVal)
         ax_h.plot(h.store[:, time], color=colorVal)
 
     # Add the custom colorbar
@@ -193,38 +204,45 @@ def rain(args):
     dt = 0.001                  # time step [s]
     dx = 1                      # grid spacing [cm]
     ho = 0.01                   # initial perturbation of surface [cm]
+    f = 1e-4
     gu = g * dt / dx            # first handy constant
+    cor = 2*dt*f
     gh = H * dt / dx            # second handy constant
     # Create velocity and surface height objects
     u = Quantity(n_grid, n_time)
     h = Quantity(n_grid, n_time)
+    v = Quantity(n_grid, n_time)
     # Set up initial conditions and store them in the time step
     # results arrays
-    initial_conditions(u, h, ho)
+    initial_conditions(u, v, h, ho)
     u.store_timestep(0, 'prev')
     h.store_timestep(0, 'prev')
+    v.store_timestep(0, 'prev')
     # Calculate the first time step values from the
     # predictor-corrector, apply the boundary conditions, and store
     # the values in the time step results arrays
-    first_time_step(u, h, g, H, dt, dx, ho, gu, gh, n_grid)
-    boundary_conditions(u.now, h.now, n_grid)
+    first_time_step(u, v, h, g, H, dt, dx, ho, gu, gh, cor, n_grid)
+    boundary_conditions(u.now, v.now, h.now, n_grid)
     u.store_timestep(1, 'now')
+    v.store_timestep(1, 'now')
     h.store_timestep(1, 'now')
     # Time step loop using leap-frog scheme
     for t in np.arange(2, n_time):
         # Advance the solution and apply the boundary conditions
-        leap_frog(u, h, gu, gh, n_grid)
-        boundary_conditions(u.next, h.next, n_grid)
+        leap_frog(u, v, h, gu, gh, cor, n_grid)
+        boundary_conditions(u.next, v.next, h.next, n_grid)
         # Store the values in the time step results arrays, and shift
         # .now to .prev, and .next to .now in preparation for the next
         # time step
         u.store_timestep(t)
+        v.store_timestep(t)
         h.store_timestep(t)
         u.shift()
+        v.shift()
         h.shift()
 
     # Plot the results as colored graphs
-    make_graph(u, h, dt, n_time)
+    make_graph(u, v, h, dt, n_time)
     return
 
 
