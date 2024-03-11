@@ -101,6 +101,7 @@ def initial_conditions(u, h, ho):
     h.prev[len(h.prev) // 2] = ho
 
 
+
 def boundary_conditions(u_array, h_array, n_grid):
     """Set the boundary condition values.
     """
@@ -115,12 +116,12 @@ def first_time_step(u, h, g, H, dt, dx, ho, gu, gh, n_grid):
     predictor-corrector derived from equations 4.18 and 4.19.
     """
     u.now[1:n_grid - 1] = 0
-    factor = gu * ho / 2
+    factor = gu * ho
     midpoint = n_grid // 2
     u.now[midpoint - 1] = -factor
-    u.now[midpoint + 1] = factor
+    u.now[midpoint] = factor
     h.now[1:n_grid - 1] = 0
-    h.now[midpoint] = ho - g * H * ho * dt ** 2 / (4 * dx ** 2)
+    h.now[midpoint] = ho - g * H * ho * dt ** 2 / (dx ** 2)
 
 
 def leap_frog(u, h, gu, gh, n_grid):
@@ -128,8 +129,11 @@ def leap_frog(u, h, gu, gh, n_grid):
     derived from equations 4.16 and 4.17.
     """
     for pt in np.arange(1, n_grid - 1):
-        u.next[pt] = u.prev[pt] - gu * (h.now[pt + 1] - h.now[pt - 1])
-        h.next[pt] = h.prev[pt] - gh * (u.now[pt + 1] - u.now[pt - 1])
+        # u.next[pt] = u.prev[pt] - gu * (h.now[pt + 1] - h.now[pt - 1])
+        # h.next[pt] = h.prev[pt] - gh * (u.now[pt + 1] - u.now[pt - 1])
+        u.next[pt] = u.prev[pt] - (2*gu) * (h.now[pt + 1] - h.now[pt])
+        h.next[pt] = h.prev[pt] - (2*gh) * (u.now[pt] - u.now[pt - 1])
+ 
 #     Alternate vectorized implementation:
 #     u.next[1:n_grid - 1] = (u.prev[1:n_grid - 1]
 #                             - gu * (h.now[2:n_grid] - h.now[:n_grid - 2]))
