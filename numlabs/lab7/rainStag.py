@@ -107,8 +107,10 @@ def boundary_conditions(u_array, h_array, n_grid):
     """
     u_array[0] = 0
     u_array[n_grid - 1] = 0
-    h_array[0] = h_array[1]
-    h_array[n_grid-1] = h_array[n_grid-2]
+    h_array[0] = 0
+    h_array[1] = 0 
+    h_array[n_grid-1] = 0
+    h_array[n_grid-2] = 0
 
 
 def first_time_step(u, h, g, H, dt, dx, ho, gu, gh, n_grid):
