@@ -1,33 +1,6 @@
-#!/usr/bin/env python
-"""Calculate the values of surface height (h) and east-west velocity
-(u) in a dish of water where a point disturbance of h initiates waves.
-Use the simplified shallow water equations on a non-staggered grid.
-
-This is an implementation of lab7 section 4.3.
-
-Example usage from the notebook::
-
-from numlabs.lab7 import rain
-# Run 5 time steps on a 9 point grid
-rain.rain(5,9)
-
-Example usage from the shell::
-
-  # Run 5 time steps on a 9 point grid
-  $ rain.py 5 9
-
-The graph window will close as soon as the animation finishes.  And
-the default run for 5 time steps doesn't produce much of interest; try
-at least 100 steps.
-
-Example usage from the Python interpreter::
-
-  $ python
-  ...
-  >>> import rain
-  >>> # Run 200 time steps on a 9 point grid
-  >>> rain.rain((200, 9))
-"""
+# Modified version of rain.py as provided by Lab 7a
+# Modifications are: moved to staggered grid, f!=0, no variation in Y.
+# See equations labled "No Variation in y" in lab 7a
 from __future__ import division
 import copy
 import sys
@@ -96,6 +69,7 @@ class Quantity(object):
 def initial_conditions(u, v, h, ho):
     """Set the initial condition values.
     """
+    # U and V on same grid, ICs are same 
     u.prev[:] = 0
     v.prev[:] = 0
     h.prev[:] = 0
@@ -105,42 +79,42 @@ def initial_conditions(u, v, h, ho):
 def boundary_conditions(u_array, v_array, h_array, n_grid):
     """Set the boundary condition values.
     """
+
+    #U and V are on the same grid BCs are same
     u_array[0] = 0
     u_array[n_grid - 1] = 0
-    v_array[0] = 0
+    v_array[0] = 0 
     v_array[n_grid - 1] = 0
-    h_array[0] = h_array[1]
-    h_array[n_grid-1] = h_array[n_grid-2]
+    h_array[0] = 0
+    h_array[1] = 0 
+    h_array[n_grid-1] = 0
+    h_array[n_grid-2] = 0
 
 
-def first_time_step(u, v, h, g, H, dt, dx, ho, gu, gh, n_grid):
+def first_time_step(u, v, h, g, H, f, dt, dx, ho, gu, gh, n_grid):
     """Calculate the first time step values from the analytical
     predictor-corrector derived from equations 4.18 and 4.19.
     """
     u.now[1:n_grid - 1] = 0
-    v.now[1:n_grid - 1] = 0
+    v.now[1:n_grid - 1] = 0 
+    factor = gu * ho
     midpoint = n_grid // 2
-    factor_u = (gu * ho /2)
-    #factor_v = 
-    u.now[midpoint - 1] = -factor_u
-    u.now[midpoint + 1] = factor_u
+    u.now[midpoint - 1] = -factor
+    u.now[midpoint] = factor
+    v.now[midpoint] = 2*dt*f*factor/2
+    v.now[midpoint - 1] = - v.now[midpoint]
     h.now[1:n_grid - 1] = 0
-    h.now[midpoint] = ho - g * H * ho * dt ** 2 / (4 * dx ** 2)
+    h.now[midpoint] = ho - g * H * ho * dt ** 2 / (dx ** 2)
 
 def leap_frog(u, v, h, cor, gu, gh, n_grid):
     """Calculate the next time step values using the leap-frog scheme
     derived from equations 4.16 and 4.17.
     """
     for pt in np.arange(1, n_grid - 1):
-        # + (cor * v.now[pt])
-        u.next[pt] = u.prev[pt] - gu * (h.now[pt + 1] - h.now[pt - 1])
-        v.next[pt] = v.prev[pt] - cor*u.now[pt]
-        h.next[pt] = h.prev[pt] - gh * (u.now[pt + 1] - u.now[pt - 1])
-#     Alternate vectorized implementation:
-#     u.next[1:n_grid - 1] = (u.prev[1:n_grid - 1]
-#                             - gu * (h.now[2:n_grid] - h.now[:n_grid - 2]))
-#     h.next[1:n_grid - 1] = (h.prev[1:n_grid - 1]
-#                             - gh * (u.now[2:n_grid] - u.now[:n_grid - 2]))
+        # Staggered Equations with no variation in y but f != 0 
+        u.next[pt] = u.prev[pt] - (2*gu) * (h.now[pt + 1] - h.now[pt]) + cor*v.now[pt]
+        v.next[pt] = v.prev[pt] - cor * u.now[pt]
+        h.next[pt] = h.prev[pt] - (2*gh) * (u.now[pt] - u.now[pt - 1])
 
 
 def make_graph(u, v, h, dt, n_time):
@@ -203,8 +177,8 @@ def rain(args):
     ho = 0.01                   # initial perturbation of surface [cm]
     gu = g * dt / dx            # first handy constant
     gh = H * dt / dx            # second handy constant
-    f = 1e-4
-    cor = 2*dt*f
+    f = 1e-4 # coriolis 
+    cor = 2*dt*f # third handy constant 
     # Create velocity and surface height objects
     u = Quantity(n_grid, n_time)
     h = Quantity(n_grid, n_time)
@@ -218,7 +192,7 @@ def rain(args):
     # Calculate the first time step values from the
     # predictor-corrector, apply the boundary conditions, and store
     # the values in the time step results arrays
-    first_time_step(u, v, h, g, H, dt, dx, ho, gu, gh, n_grid)
+    first_time_step(u, v, h, g, H, f, dt, dx, ho, gu, gh, n_grid)
     boundary_conditions(u.now, v.now, h.now, n_grid)
     u.store_timestep(1, 'now')
     v.store_timestep(1, 'now')
