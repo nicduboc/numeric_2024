@@ -7,7 +7,7 @@ import matplotlib.cm as cmx
 import matplotlib.colorbar as colorbar
 import numpy as np
 
-def initialize(timesteps, lab_example=False):
+def initialize(timesteps, cr):
     ''' initialize the physical system, horizontal grid size, etc
     '''
     # below are the parameters that can be varied
@@ -16,18 +16,19 @@ def initialize(timesteps, lab_example=False):
     effective_points = 500
     dx = domain_length/effective_points
 
-    dt = 0.4 * dx/ u
+    # cr = 0.4 
+    dt = cr * dx/ u
     Numpoints = effective_points + 1
     shift = Numpoints * dx / 2
     c_0 = 1
     alpha = 1 / (150e3)**2
     epsilon = 0.0001
 
-    if lab_example:
-        Numpoints = 77
-        shift = 7
-        alpha = 0.1
-        dt = 0.9
+    # if lab_example:
+    #     Numpoints = 77
+    #     shift = 7
+    #     alpha = 0.1
+    #     dt = 0.9
 
 # create the concentration matrix and initialize it
     cmatrix = np.zeros((timesteps+1, Numpoints+4))
@@ -57,9 +58,9 @@ def advect3_gettable(order, Numpoints):
     temp = np.zeros(5)
     ltable = np.zeros((order + 1, 5))
 
-    fname = '../../numlabs/lab10/Tables/l{0}_table.txt'.format(order)
+    fname = f'/Users/Zuni/repos/numeric_2024/numlabs/lab10/Tables/l{order}_table.txt'
     fp = open(fname, 'r')
-
+    # print(fname)
     for i in range(order+1):
         line = fp.readline()
         temp = line.split()
@@ -87,6 +88,8 @@ def step_advect2(timesteps, cmatrix, Numpoints, u, dt, dx):
             u * dt/ dx * (cmatrix[timecount, 1:Numpoints] - cmatrix[timecount, :Numpoints-1]))
 
         cmatrix = boundary_conditions(cmatrix, timecount+1, Numpoints)
+        # if timecount == timesteps-1:
+        #     print(f'max value = {np.max(cmatrix[timecount,:])}')
     return cmatrix
 
 
@@ -97,7 +100,7 @@ def step_advect3(timesteps, ltable, cmatrix, order, Numpoints, u, dt, dx, epsilo
     amatrix = np.zeros((order+1, Numpoints))
 
     for timecount in range(0,timesteps):
-        for base in range(0,5):
+        for base in range(0,5): # 5 is for the number of coefficients in a single time step for a given order polynomial 
             amatrix[0:order+1, 0:Numpoints] += np.dot(
                 ltable[0:order+2, base:base+1],
                 cmatrix[timecount:timecount+1, 0+base:Numpoints+base])
@@ -119,28 +122,31 @@ def step_advect3(timesteps, ltable, cmatrix, order, Numpoints, u, dt, dx, epsilo
         Iatj = np.maximum(Iatj, Iplus + epsilon)
 
 # finally, calculate the current concentration
-        cmatrix[timecount+1, 3:Numpoints+2] = (
-            cmatrix[timecount, 3:Numpoints+2] *
-            (1 - Iplus[1:Numpoints]/ Iatj[1:Numpoints]) +
-             cmatrix[timecount, 2:Numpoints+1]*
-             Iplus[0:Numpoints-1]/ Iatj[0:Numpoints-1])
+        cmatrix[timecount+1, 3:Numpoints+2] = (cmatrix[timecount, 3:Numpoints+2] *(1 - Iplus[1:Numpoints]/ Iatj[1:Numpoints]) 
+        +cmatrix[timecount, 2:Numpoints+1]*Iplus[0:Numpoints-1]/ Iatj[0:Numpoints-1])
 
 # set the boundary condition at the first point
         cmatrix[timecount+1, 2]= cmatrix[timecount+1, Numpoints+1]
 # set the other boundary points
         cmatrix = boundary_conditions(cmatrix, timecount+1, Numpoints)
+        # if timecount == timesteps-1:
+        #     print(f'max value = {np.max(cmatrix[timecount,:])}')
 
     return cmatrix
 
-def make_graph(cmatrix, timesteps, Numpoints, dt):
+def make_graph(cmatrix, timesteps, Numpoints, dt, cr, order):
     """Create graphs of the model results using matplotlib.
     """
-
+    ampF = np.max(cmatrix[0,:])
+    ampE = np.max(cmatrix[-1,:])
+    error = abs(ampE-ampF)
     # Create a figure with size 15, 5
     fig, ax = plt.subplots(1,1, figsize=(15, 5))
 
     # Set the figure title, and the axes labels.
-    the_title = fig.text(0.25, 0.95, 'Concentrations Results from t = %.3fs to %.3fs' % (0, dt*timesteps))
+    the_title = fig.text(0.25, 1, 
+                         'Concentrations Results from t = %.3fs to %.3fs\n Courant Number = %.1f\n approximated polynomial = %.1f\namplitude error between first and last timestep = %.7f' 
+                         % (0, dt*timesteps,cr,order,error))
     ax.set_ylabel('Concentration')
     ax.set_xlabel('Grid Point')
 
@@ -151,14 +157,13 @@ def make_graph(cmatrix, timesteps, Numpoints, dt):
     scalarMap = cmx.ScalarMappable(norm=cNorm, cmap=cmap)
 
     # Only try to plot 20 lines, so choose an interval if more than that (i.e. plot every interval lines)
-    plotsteps = (np.arange(0, timesteps, timesteps/20) + timesteps/20).astype(int)
-
+    #plotsteps = (np.arange(0, timesteps, timesteps/40) + timesteps/40).astype(int)
+    plotsteps = cmatrix.shape[0]
     ax.plot(cmatrix[0, :], color='r', linewidth=3)
     # Do the main plot
-    for time in plotsteps:
+    for time in  range(1,plotsteps-1):
         colorVal = scalarMap.to_rgba(time)
         ax.plot(cmatrix[time, :], color=colorVal)
-
     # Add the custom colorbar
     ax2 = fig.add_axes([0.95, 0.05, 0.05, 0.9])
     cb1 = colorbar.ColorbarBase(ax2, cmap=cmap, norm=cNorm_inseconds)
@@ -167,27 +172,27 @@ def make_graph(cmatrix, timesteps, Numpoints, dt):
 
 def advection(timesteps, lab_example=True):
     '''Entry point for the Central Scheme'''
-    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix = initialize(timesteps, lab_example)
+    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix, cr = initialize(timesteps, lab_example)
 
     cmatrix = step_advect(timesteps, cmatrix, Numpoints, u, dt, dx)
-    make_graph(cmatrix, timesteps, Numpoints, dt)
+    make_graph(cmatrix, timesteps, Numpoints, dt,cr)
 
 def advection2(timesteps, lab_example=True):
     '''Entry point for the Upstream Scheme'''
-    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix = initialize(timesteps, lab_example)
+    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix, cr = initialize(timesteps, lab_example)
     cmatrix = step_advect2(timesteps, cmatrix, Numpoints, u, dt, dx)
-    make_graph(cmatrix, timesteps, Numpoints, dt)
+    make_graph(cmatrix, timesteps, Numpoints, dt,cr)
 
-def advection3(timesteps, order, lab_example=True):
+def advection3(timesteps, order, cr):
     ''' Entry point for the Bott Scheme'''
-    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix = initialize(timesteps, lab_example)
+    dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix = initialize(timesteps, cr)
     ltable = advect3_gettable(order, Numpoints)
     cmatrix = step_advect3(timesteps, ltable, cmatrix, order, Numpoints, u, dt, dx, epsilon)
-    # make_graph(cmatrix, timesteps, Numpoints, dt)
+    make_graph(cmatrix, timesteps, Numpoints, dt, cr, order)
     return cmatrix
 
-def main():
-    advection3(60,4,lab_example=False) 
-
-if __name__ =='__main__':
-    main()
+# def main():
+#     #advection(60,lab_example=False)
+#     advection3(60,4,lab_example=False)
+# if __name__ =='__main__':
+#     main()
