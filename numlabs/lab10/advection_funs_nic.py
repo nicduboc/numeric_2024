@@ -49,7 +49,7 @@ def boundary_conditions(cmatrix, time, Numpoints):
 
     return cmatrix
 
-def advect3_gettable(order, Numpoints):
+def advect3_gettable(order, Numpoints,table):
 
     '''read in the corresponding coefficient table for the calculation of coefficients for advection3
     '''
@@ -58,7 +58,12 @@ def advect3_gettable(order, Numpoints):
     temp = np.zeros(5)
     ltable = np.zeros((order + 1, 5))
 
-    fname = f'/Users/Zuni/repos/numeric_2024/numlabs/lab10/Tables/l{order}_table.txt'
+    # fname = f'/Users/Zuni/repos/numeric_2024/numlabs/lab10/Tables/l{order}_table.txt'
+    if table == 'left':
+        fname = '../../numlabs/lab10/Tables/l{0}_table_left.txt'.format(order)
+    else:
+        fname = '../../numlabs/lab10/Tables/l{0}_table.txt'.format(order)
+        
     fp = open(fname, 'r')
     # print(fname)
     for i in range(order+1):
@@ -183,16 +188,16 @@ def advection2(timesteps, lab_example=True):
     cmatrix = step_advect2(timesteps, cmatrix, Numpoints, u, dt, dx)
     make_graph(cmatrix, timesteps, Numpoints, dt,cr)
 
-def advection3(timesteps, order, cr):
+def advection3(timesteps, order, cr,table):
     ''' Entry point for the Bott Scheme'''
     dx, u, dt, Numpoints, shift, c_0, alpha, epsilon, cmatrix = initialize(timesteps, cr)
-    ltable = advect3_gettable(order, Numpoints)
+    ltable = advect3_gettable(order, Numpoints,table)
     cmatrix = step_advect3(timesteps, ltable, cmatrix, order, Numpoints, u, dt, dx, epsilon)
     make_graph(cmatrix, timesteps, Numpoints, dt, cr, order)
     return cmatrix
 
-# def main():
-#     #advection(60,lab_example=False)
-#     advection3(60,4,lab_example=False)
-# if __name__ =='__main__':
-#     main()
+def main():
+    #advection(60,lab_example=False)
+    advection3(60,3,lab_example=False)
+if __name__ =='__main__':
+    main()
