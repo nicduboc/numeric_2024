@@ -13,7 +13,7 @@ def initialize(timesteps, cr):
     # below are the parameters that can be varied
     u = 20.
     domain_length = 86400*20 # so it goes around the domain once in a day
-    effective_points = 500
+    effective_points = 100
     dx = domain_length/effective_points
 
     # cr = 0.4 
