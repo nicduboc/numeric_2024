@@ -1,3 +1,5 @@
+#modified advection_funs.py for assignment lab 10 
+
 '''
 Module containing advection3 and, in time advection and advection2
 '''
@@ -196,6 +198,7 @@ def advection3(timesteps, order, cr,table):
     make_graph(cmatrix, timesteps, Numpoints, dt, cr, order)
     return cmatrix
 
+# For debugging 
 def main():
     #advection(60,lab_example=False)
     advection3(60,3,lab_example=False)
